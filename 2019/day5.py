@@ -33,8 +33,8 @@ def evalProgram(program, inputValues):
             program[arg1] = inputValues.pop()
             return pc + 2
         elif opcode == OUT:
-            arg1 = program[pc + 1]
-            output.append(program[arg1])
+            arg1 = argv(pc + 1, mode1)
+            output.append(arg1)
             return pc + 2
         elif opcode == HALT:
             return -1
@@ -93,7 +93,7 @@ class Day5(unittest.TestCase):
         self.assertEqual(evalProgram([3, 3, 1105, -1, 9, 1101, 0, 0, 12, 4, 12, 99, 1], [0]), [0])
         self.assertEqual(evalProgram([3, 3, 1105, -1, 9, 1101, 0, 0, 12, 4, 12, 99, 1], [5]), [1])
 
-    def skip_testLargerExample(self):  # TODO?
+    def testLargerExample(self):
         # output 999 if the input is less than 8, 1000 if the input is equal to 8, 1001 otherwise
         program = [3, 21, 1008, 21, 8, 20, 1005, 20, 22, 107, 8, 21, 20, 1006, 20, 31,
                    1106, 0, 36, 98, 0, 0, 1002, 21, 125, 20, 4, 20, 1105, 1, 46, 104,
