@@ -1,6 +1,7 @@
 import unittest
 from collections import Counter, defaultdict, deque
 
+
 def countOrbits(adj, start):
     orbits = Counter()
     Q = [start]
@@ -11,16 +12,18 @@ def countOrbits(adj, start):
             Q.append(v)
     return sum(orbits.values())
 
+
 def countTransfers(adj, start, end):
     visited = set()
     Q = deque([(start, 0)])
     while len(Q) > 0:
         u, dist = Q.popleft()
         if u == end:
-            return dist - 2 # no transfers between first/last orbits
+            return dist - 2  # no transfers between first/last orbits
         if u not in visited:
             visited.add(u)
             Q.extend((v, dist + 1) for v in adj[u])
+
 
 def parseMap(path='input6', directed=True):
     adj = defaultdict(set)
@@ -32,6 +35,7 @@ def parseMap(path='input6', directed=True):
                 adj[v].add(u)
     return adj
 
+
 class Day6(unittest.TestCase):
     def testPart1(self):
         adj = parseMap(directed=True)
@@ -40,6 +44,7 @@ class Day6(unittest.TestCase):
     def testPart2(self):
         adj = parseMap(directed=False)
         self.assertEqual(countTransfers(adj, 'YOU', 'SAN'), 316)
+
 
 if __name__ == '__main__':
     unittest.main()
