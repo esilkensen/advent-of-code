@@ -1,5 +1,5 @@
-import unittest
 from collections import Counter, defaultdict, deque
+import unittest
 
 
 def countOrbits(adj, start):
