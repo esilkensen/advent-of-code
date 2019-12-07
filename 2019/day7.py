@@ -1,5 +1,5 @@
-from collections import deque
-from threading import Condition, Thread
+from queue import Queue
+from threading import Thread
 
 import unittest
 
@@ -47,33 +47,27 @@ def evalProgram(program, read, write):
 
 def thrusterSignal(program, phaseSettings):
     programs = [[n for n in program] for _ in phaseSettings]
-    inputs = [deque([p]) for p in phaseSettings]
+    inputs = [Queue() for _ in phaseSettings]
     outputs = [[] for _ in phaseSettings]
-    conds = [Condition() for _ in phaseSettings]
 
     def runProgram(i):
         def read():
-            if len(inputs[i]) == 0:
-                with conds[i]:
-                    conds[i].wait()
-            return inputs[i].popleft()
+            return inputs[i].get()
 
         def write(n):
-            j = (i + 1) % len(phaseSettings)
             outputs[i].append(n)
-            with conds[j]:
-                inputs[j].append(n)
-                conds[j].notifyAll()
+            inputs[(i + 1) % len(inputs)].put(n)
 
         evalProgram(programs[i], read, write)
 
-    inputs[0].append(0)  # first input
+    for i, p in enumerate(phaseSettings):
+        inputs[i].put(p)
+        if i == 0:
+            inputs[0].put(0)  # first input
 
-    threads = []
-    for i in range(len(phaseSettings)):
-        thread = Thread(target=runProgram, args=(i,))
+    threads = [Thread(target=runProgram, args=(i,)) for i in range(len(programs))]
+    for thread in threads:
         thread.start()
-        threads.append(thread)
     for thread in threads:
         thread.join()
 
