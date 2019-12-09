@@ -1,19 +1,18 @@
 import unittest
 
-from intcode import evalProgram
+from intcode import runProgram
 
 
 def run(program, noun, verb):
     program[1] = noun
     program[2] = verb
-    evalProgram(program)
-    return program[0]
+    return runProgram(program)[0]
 
 
 def search(program, target):
     for noun in range(100):
         for verb in range(100):
-            if run([n for n in program], noun, verb) == target:
+            if run(program, noun, verb) == target:
                 return 100 * noun + verb
 
 

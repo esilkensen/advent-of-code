@@ -1,47 +1,91 @@
-def evalProgram(program, read=None, write=None):
-    ADD, MUL, IN, OUT, JNZ, JZ, LT, EQ, RB, HALT = 1, 2, 3, 4, 5, 6, 7, 8, 9, 99
+from collections import defaultdict
 
-    binop = {ADD: lambda a, b: a + b, MUL: lambda a, b: a * b,
-             LT: lambda a, b: int(a < b), EQ: lambda a, b: int(a == b)}
 
-    jop = {JNZ: lambda a: a != 0, JZ: lambda a: a == 0}
+ADD, MUL, IN, OUT, JNZ, JZ, LT, EQ, RB, HALT = 1, 2, 3, 4, 5, 6, 7, 8, 9, 99
+POS, IMM, OFF = 0, 1, 2
 
-    rb = 0
+BINOP = {ADD: lambda a, b: a + b, MUL: lambda a, b: a * b,
+         LT: lambda a, b: int(a < b), EQ: lambda a, b: int(a == b)}
 
-    def argv(i, mode, deref=True):
-        addr = program[i] if mode == 0 else i if mode == 1 else program[i] + rb
-        return program[addr] if deref else addr
+JOP = {JNZ: lambda a: a != 0, JZ: lambda a: a == 0}
 
-    def evalInstr(pc):
-        nonlocal rb
-        instr = str(program[pc]).zfill(5)
-        opcode, mode1, mode2, mode3 = int(instr[3:]), int(instr[2]), int(instr[1]), int(instr[0])
 
-        if opcode in binop:
-            arg1 = argv(pc + 1, mode1)
-            arg2 = argv(pc + 2, mode2)
-            arg3 = argv(pc + 3, mode3, False)
-            program[arg3] = binop[opcode](arg1, arg2)
-            return pc + 4
-        elif opcode in jop:
-            arg1 = argv(pc + 1, mode1)
-            arg2 = argv(pc + 2, mode2)
-            return arg2 if jop[opcode](arg1) else pc + 3
+class Intcode:
+    def __init__(self, program, read=None, write=None):
+        self._program = [n for n in program]
+        self._read = read
+        self._write = write
+
+    def run(self):
+        self.mem = defaultdict(int)
+        for i, n in enumerate(self._program):
+            self.mem[i] = n
+
+        self.pc, self.rb = 0, 0
+        while self.pc != -1:
+            self.step()
+
+        return self.mem
+
+    def step(self):
+        instr = str(self.mem[self.pc]).zfill(5)
+        opcode, modes = int(instr[3:]), [int(d) for d in instr[2::-1]]
+
+        if opcode in BINOP:
+            self.binop(opcode, modes)
+        elif opcode in JOP:
+            self.jop(opcode, modes)
         elif opcode == IN:
-            arg1 = argv(pc + 1, mode1, False)
-            program[arg1] = read()
-            return pc + 2
+            self.read(modes)
         elif opcode == OUT:
-            arg1 = argv(pc + 1, mode1)
-            write(arg1)
-            return pc + 2
+            self.write(modes)
         elif opcode == RB:
-            arg1 = argv(pc + 1, mode1)
-            rb += arg1
-            return pc + 2
+            self.offset(modes)
         elif opcode == HALT:
-            return -1
+            self.halt()
 
-    pc = 0
-    while pc != -1:
-        pc = evalInstr(pc)
+    def binop(self, opcode, modes):
+        arg1 = self.argv(1, modes[0])
+        arg2 = self.argv(2, modes[1])
+        arg3 = self.argv(3, modes[2], deref=False)
+        self.mem[arg3] = BINOP[opcode](arg1, arg2)
+        self.pc += 4
+
+    def jop(self, opcode, modes):
+        arg1 = self.argv(1, modes[0])
+        arg2 = self.argv(2, modes[1])
+        self.pc = arg2 if JOP[opcode](arg1) else self.pc + 3
+
+    def read(self, modes):
+        arg1 = self.argv(1, modes[0], deref=False)
+        self.mem[arg1] = self._read()
+        self.pc += 2
+
+    def write(self, modes):
+        arg1 = self.argv(1, modes[0])
+        self._write(arg1)
+        self.pc += 2
+
+    def offset(self, modes):
+        arg1 = self.argv(1, modes[0])
+        self.rb += arg1
+        self.pc += 2
+
+    def halt(self):
+        self.pc = -1
+
+    def argv(self, i, mode, deref=True):
+        base = self.pc + i
+        offset = self.rb if mode == OFF else 0
+        addr = base if mode == IMM else self.mem[base] + offset
+        return self.mem[addr] if deref else addr
+
+
+def runProgram(program, read=None, write=None):
+    return Intcode(program, read, write).run()
+
+
+def runProgramIO(program, inputValues):
+    outputValues = []
+    runProgram(program, inputValues.pop, outputValues.append)
+    return outputValues

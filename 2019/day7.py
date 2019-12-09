@@ -2,7 +2,7 @@ from queue import Queue
 from threading import Thread
 import unittest
 
-from intcode import evalProgram
+from intcode import runProgram
 
 
 def thrusterSignal(program, phaseSettings):
@@ -10,7 +10,7 @@ def thrusterSignal(program, phaseSettings):
     inputs = [Queue() for _ in phaseSettings]
     outputs = [[] for _ in phaseSettings]
 
-    def runProgram(i):
+    def run(i):
         def read():
             return inputs[i].get()
 
@@ -18,14 +18,14 @@ def thrusterSignal(program, phaseSettings):
             outputs[i].append(n)
             inputs[(i + 1) % len(inputs)].put(n)
 
-        evalProgram(programs[i], read, write)
+        runProgram(programs[i], read, write)
 
     for i, p in enumerate(phaseSettings):
         inputs[i].put(p)
         if i == 0:
             inputs[0].put(0)  # first input
 
-    threads = [Thread(target=runProgram, args=(i,)) for i in range(len(programs))]
+    threads = [Thread(target=run, args=(i,)) for i in range(len(programs))]
     for thread in threads:
         thread.start()
     for thread in threads:
